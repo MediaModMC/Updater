@@ -1,95 +1,62 @@
 package org.mediamod.updater;
 
-import org.mediamod.updater.ui.main.UpdaterFrame;
+import org.mediamod.updater.exceptions.UpdateFailedException;
+import org.mediamod.updater.ui.panes.ErrorPane;
+import org.mediamod.updater.ui.panes.SuccessPane;
+import org.mediamod.updater.ui.panes.WaitingForMCPane;
+import org.mediamod.updater.ui.core.UpdaterFrame;
 import org.mediamod.updater.ui.theme.UpdaterTheme;
 import org.mediamod.updater.update.UpdateHandler;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicButtonUI;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
-import java.net.URL;
 
 public class MediaModUpdater {
-    private static File logFile;
-
     public static void main(String... args) throws Exception {
-        UpdateHandler updateHandler = new UpdateHandler(String.join(" ", args));
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 
         UpdaterFrame frame = new UpdaterFrame();
         frame.setBackground(UpdaterTheme.getBackgroundColor());
 
-        BufferedImage header = null;
-        try {
-            URL resource = MediaModUpdater.class.getResource("/header.png");
-            header = ImageIO.read(resource);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        UpdateHandler updateHandler = new UpdateHandler(String.join(" ", args));
+        if (!updateHandler.logFile.exists()) {
+            if(!updateHandler.logFile.getParentFile().exists()) {
+                if(!updateHandler.logFile.getParentFile().mkdir()) {
+                    frame.setContentPane(new ErrorPane("Failed to create logfile! Join our discord for help", "Join", () -> {
+                        try {
+                            Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
+                        } catch (Exception ignored) {}
+                    }));
 
-        assert header != null;
-        JLabel headerLabel = new JLabel(new ImageIcon(header.getScaledInstance(330, 91, Image.SCALE_SMOOTH)));
-        headerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                    frame.setLocationRelativeTo(null);
+                    frame.setVisible(true);
 
-        logFile = new File(updateHandler.mcDir, "mediamod/log/MEDIAMOD_UPDATE_LOG.txt");
-        if (!logFile.exists()) {
-            if (!(logFile.getParentFile().mkdir() && logFile.createNewFile())) {
-                JLabel label = new JLabel();
-                label.setText("An error occurred: failed to create logfile!");
-                label.setForeground(UpdaterTheme.getTextColor());
-                label.setFont(new Font(label.getFont().getName(), label.getFont().getStyle(), 13));
-                label.setAlignmentX(Component.CENTER_ALIGNMENT);
+                    return;
+                } else {
+                    if(!updateHandler.logFile.createNewFile()) {
+                        frame.setContentPane(new ErrorPane("Failed to create logfile! Join our discord for help", "Join", () -> {
+                            try {
+                                Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
+                            } catch (Exception ignored) {}
+                        }));
 
-                JButton button = new JButton();
-                button.setText("Join our Discord for support");
-                button.setFont(new Font(label.getFont().getName(), label.getFont().getStyle(), 13));
-                button.setUI(new BasicButtonUI());
-                button.setBackground(UpdaterTheme.getPrimaryColor());
-                button.setForeground(UpdaterTheme.getTextColor());
-                button.setAlignmentX(Component.CENTER_ALIGNMENT);
-                button.addActionListener((a) -> {
-                    try {
-                        Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
-                    } catch (Exception ignored) {
+                        frame.setLocationRelativeTo(null);
+                        frame.setVisible(true);
+
+                        return;
                     }
-                });
-
-                frame.panel.add(Box.createVerticalGlue());
-                frame.panel.add(headerLabel);
-                frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-                frame.panel.add(label);
-                frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-                frame.panel.add(button);
-                frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-                frame.panel.add(Box.createVerticalGlue());
-
-                frame.setLocationRelativeTo(null);
-                frame.setVisible(true);
-                return;
+                }
             }
         }
 
-        PrintStream fileStream = new PrintStream(logFile);
+        PrintStream fileStream = new PrintStream(updateHandler.logFile);
         System.setOut(fileStream);
 
         if (updateHandler.updateIsValid()) {
-            JLabel label = new JLabel();
-            label.setText("Waiting for Minecraft to finish...");
-            label.setForeground(UpdaterTheme.getTextColor());
-            label.setFont(new Font(label.getFont().getName(), label.getFont().getStyle(), 13));
-            label.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-            frame.panel.add(Box.createVerticalGlue());
-            frame.panel.add(headerLabel);
-            frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-            frame.panel.add(label);
-            frame.panel.add(Box.createVerticalGlue());
+            frame.setContentPane(new WaitingForMCPane());
 
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
@@ -98,85 +65,32 @@ public class MediaModUpdater {
                 Thread.sleep(500);
             }
 
-            label.setText("Updating MediaMod...");
+            try {
+                updateHandler.performUpdate();
+                frame.setContentPane(new SuccessPane());
+                frame.invalidate();
+                frame.revalidate();
 
-            if (updateHandler.performUpdate()) {
-                JButton button = new JButton();
-                button.setText("Close");
-                button.setFont(new Font(label.getFont().getName(), label.getFont().getStyle(), 13));
-                button.setUI(new BasicButtonUI());
-                button.setBackground(UpdaterTheme.getPrimaryColor());
-                button.setForeground(UpdaterTheme.getTextColor());
-                button.setAlignmentX(Component.CENTER_ALIGNMENT);
-                button.addActionListener((a) -> System.exit(0));
+               updateHandler.logFile.deleteOnExit();
+            } catch (UpdateFailedException e) {
+                boolean restored = updateHandler.restore();
 
-                label.setText("Successfully updated MediaMod!");
-                frame.panel.remove(frame.panel.getComponents().length - 1);
-                frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-                frame.panel.add(button);
-                frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-                frame.panel.add(Box.createVerticalGlue());
-
-                frame.panel.revalidate();
-                frame.panel.repaint();
-
-                new File("MEDIAMOD_LOG.txt").deleteOnExit();
-            } else {
-                JButton button = new JButton();
-                button.setText("Export Log + Join");
-                button.setFont(new Font(label.getFont().getName(), label.getFont().getStyle(), 13));
-                button.setUI(new BasicButtonUI());
-                button.setBackground(UpdaterTheme.getPrimaryColor());
-                button.setForeground(UpdaterTheme.getTextColor());
-                button.setAlignmentX(Component.CENTER_ALIGNMENT);
-                button.addActionListener((a) -> {
+                frame.setContentPane(new ErrorPane("Failed to perform update: " + e.message + (restored ? ". All changes have been reverted" : " + Failed to revert changes") + ". Join our discord for help", "Export log + Join", () -> {
                     try {
-                        Desktop.getDesktop().open(new File(updateHandler.mcDir, "mediamod/log/MEDIAMOD_UPDATE_LOG.txt"));
                         Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
-                    } catch (Exception ignored) {
-                    }
-                });
+                        Desktop.getDesktop().open(updateHandler.logFile);
+                    } catch (Exception ignored) {}
+                }));
 
-                label.setText(String.format("<html><body style=\"padding-left: 10px; padding-right: 10px; text-align: center;\">%s</body></html>", "An error occurred. Press 'Export Log' and join our discord server for support"));
-                frame.panel.remove(frame.panel.getComponents().length - 1);
-                frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-                frame.panel.add(button);
-                frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-                frame.panel.add(Box.createVerticalGlue());
-
-                frame.panel.revalidate();
-                frame.panel.repaint();
+                frame.invalidate();
+                frame.revalidate();
             }
         } else {
-            JLabel label = new JLabel();
-            label.setText(String.format("<html><body style=\"padding-left: 10px; padding-right: 10px; text-align: center;\">%s</body></html>", "Failed to find necessary files for MediaMod Update! You can download the latest version below"));
-            label.setForeground(UpdaterTheme.getTextColor());
-            label.setFont(new Font(label.getFont().getName(), label.getFont().getStyle(), 13));
-            label.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-            JButton button = new JButton();
-            button.setText("Download");
-            button.setFont(new Font(label.getFont().getName(), label.getFont().getStyle(), 13));
-            button.setUI(new BasicButtonUI());
-            button.setBackground(UpdaterTheme.getPrimaryColor());
-            button.setForeground(UpdaterTheme.getTextColor());
-            button.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-            button.addActionListener(e -> {
+            frame.setContentPane(new ErrorPane("Failed to find necessary files. You can download the update manually below:", "Download", () -> {
                 try {
                     Desktop.getDesktop().browse(new URI("https://mediamod.conorthedev.me"));
-                } catch (Exception ignored) {
-                }
-            });
-
-            frame.panel.add(Box.createVerticalGlue());
-            frame.panel.add(headerLabel);
-            frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-            frame.panel.add(label);
-            frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-            frame.panel.add(button);
-            frame.panel.add(Box.createRigidArea(new Dimension(0, 10)));
-            frame.panel.add(Box.createVerticalGlue());
+                } catch (Exception ignored) {}
+            }));
 
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);

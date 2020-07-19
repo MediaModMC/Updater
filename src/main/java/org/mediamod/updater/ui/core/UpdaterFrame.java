@@ -1,5 +1,6 @@
-package org.mediamod.updater.ui.main;
+package org.mediamod.updater.ui.core;
 
+import org.mediamod.updater.MediaModUpdater;
 import org.mediamod.updater.ui.theme.UpdaterTheme;
 
 import javax.imageio.ImageIO;
@@ -10,7 +11,7 @@ import java.io.IOException;
 import java.net.URL;
 
 public class UpdaterFrame extends JFrame {
-    public UpdaterPanel panel;
+    public UpdaterPanel pane;
 
     public UpdaterFrame() {
         JDialog.setDefaultLookAndFeelDecorated(true);
@@ -20,8 +21,8 @@ public class UpdaterFrame extends JFrame {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setSize(340, 250);
 
-        panel = new UpdaterPanel();
-        this.add(panel, BorderLayout.CENTER);
+        pane = new UpdaterPanel();
+        this.setContentPane(pane);
 
         try {
             URL resource = getClass().getResource("/mediamod.png");
@@ -33,10 +34,24 @@ public class UpdaterFrame extends JFrame {
     }
 
     public static class UpdaterPanel extends JPanel {
+        public JLabel headerLabel;
+
         public UpdaterPanel() {
             super();
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
             setBackground(UpdaterTheme.getBackgroundColor());
+
+            BufferedImage header = null;
+            try {
+                URL resource = MediaModUpdater.class.getResource("/header.png");
+                header = ImageIO.read(resource);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            assert header != null;
+            headerLabel = new JLabel(new ImageIcon(header.getScaledInstance(330, 91, Image.SCALE_SMOOTH)));
+            headerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         }
     }
 }
