@@ -1,16 +1,16 @@
 package org.mediamod.updater;
 
 import org.mediamod.updater.exceptions.UpdateFailedException;
+import org.mediamod.updater.ui.core.UpdaterFrame;
 import org.mediamod.updater.ui.panes.ErrorPane;
 import org.mediamod.updater.ui.panes.SuccessPane;
+import org.mediamod.updater.ui.panes.UpdatingMediaModPane;
 import org.mediamod.updater.ui.panes.WaitingForMCPane;
-import org.mediamod.updater.ui.core.UpdaterFrame;
 import org.mediamod.updater.ui.theme.UpdaterTheme;
 import org.mediamod.updater.update.UpdateHandler;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
 import java.io.PrintStream;
 import java.net.URI;
 
@@ -23,12 +23,13 @@ public class MediaModUpdater {
 
         UpdateHandler updateHandler = new UpdateHandler(String.join(" ", args));
         if (!updateHandler.logFile.exists()) {
-            if(!updateHandler.logFile.getParentFile().exists()) {
-                if(!updateHandler.logFile.getParentFile().mkdir()) {
+            if (!updateHandler.logFile.getParentFile().exists()) {
+                if (!updateHandler.logFile.getParentFile().mkdir()) {
                     frame.setContentPane(new ErrorPane("Failed to create logfile! Join our discord for help", "Join", () -> {
                         try {
                             Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }));
 
                     frame.setLocationRelativeTo(null);
@@ -36,11 +37,12 @@ public class MediaModUpdater {
 
                     return;
                 } else {
-                    if(!updateHandler.logFile.createNewFile()) {
+                    if (!updateHandler.logFile.createNewFile()) {
                         frame.setContentPane(new ErrorPane("Failed to create logfile! Join our discord for help", "Join", () -> {
                             try {
                                 Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
-                            } catch (Exception ignored) {}
+                            } catch (Exception ignored) {
+                            }
                         }));
 
                         frame.setLocationRelativeTo(null);
@@ -65,13 +67,17 @@ public class MediaModUpdater {
                 Thread.sleep(500);
             }
 
+            frame.setContentPane(new UpdatingMediaModPane());
+            frame.invalidate();
+            frame.revalidate();
+
             try {
                 updateHandler.performUpdate();
                 frame.setContentPane(new SuccessPane());
                 frame.invalidate();
                 frame.revalidate();
 
-               updateHandler.logFile.deleteOnExit();
+                updateHandler.logFile.deleteOnExit();
             } catch (UpdateFailedException e) {
                 boolean restored = updateHandler.restore();
 
@@ -79,7 +85,8 @@ public class MediaModUpdater {
                     try {
                         Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
                         Desktop.getDesktop().open(updateHandler.logFile);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }));
 
                 frame.invalidate();
@@ -89,7 +96,8 @@ public class MediaModUpdater {
             frame.setContentPane(new ErrorPane("Failed to find necessary files. You can download the update manually below:", "Download", () -> {
                 try {
                     Desktop.getDesktop().browse(new URI("https://mediamod.conorthedev.me"));
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }));
 
             frame.setLocationRelativeTo(null);
