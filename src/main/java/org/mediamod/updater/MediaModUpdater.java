@@ -8,6 +8,7 @@ import org.mediamod.updater.ui.panes.UpdatingMediaModPane;
 import org.mediamod.updater.ui.panes.WaitingForMCPane;
 import org.mediamod.updater.ui.theme.UpdaterTheme;
 import org.mediamod.updater.update.UpdateHandler;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import javax.swing.*;
 import java.awt.*;
@@ -56,6 +57,7 @@ public class MediaModUpdater {
 
         PrintStream fileStream = new PrintStream(updateHandler.logFile);
         System.setOut(fileStream);
+        System.setErr(fileStream);
 
         if (updateHandler.updateIsValid()) {
             frame.setContentPane(new WaitingForMCPane());
