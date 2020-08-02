@@ -8,7 +8,6 @@ import org.mediamod.updater.ui.panes.UpdatingMediaModPane;
 import org.mediamod.updater.ui.panes.WaitingForMCPane;
 import org.mediamod.updater.ui.theme.UpdaterTheme;
 import org.mediamod.updater.update.UpdateHandler;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import javax.swing.*;
 import java.awt.*;
@@ -24,8 +23,21 @@ public class MediaModUpdater {
 
         UpdateHandler updateHandler = new UpdateHandler(String.join(" ", args));
         if (!updateHandler.logFile.exists()) {
-            if (!updateHandler.logFile.getParentFile().exists()) {
-                if (!updateHandler.logFile.getParentFile().mkdir()) {
+            System.out.println(updateHandler.logFile.getParentFile());
+            if (!updateHandler.logFile.getParentFile().mkdirs()) {
+                frame.setContentPane(new ErrorPane("Failed to create logfile! Join our discord for help", "Join", () -> {
+                    try {
+                        Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
+                    } catch (Exception ignored) {
+                    }
+                }));
+
+                frame.setLocationRelativeTo(null);
+                frame.setVisible(true);
+
+                return;
+            } else {
+                if (!updateHandler.logFile.createNewFile()) {
                     frame.setContentPane(new ErrorPane("Failed to create logfile! Join our discord for help", "Join", () -> {
                         try {
                             Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
@@ -37,20 +49,6 @@ public class MediaModUpdater {
                     frame.setVisible(true);
 
                     return;
-                } else {
-                    if (!updateHandler.logFile.createNewFile()) {
-                        frame.setContentPane(new ErrorPane("Failed to create logfile! Join our discord for help", "Join", () -> {
-                            try {
-                                Desktop.getDesktop().browse(new URI("https://discord.gg/mrPanbw"));
-                            } catch (Exception ignored) {
-                            }
-                        }));
-
-                        frame.setLocationRelativeTo(null);
-                        frame.setVisible(true);
-
-                        return;
-                    }
                 }
             }
         }
