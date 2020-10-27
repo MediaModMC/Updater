@@ -95,7 +95,7 @@ public class MediaModUpdater {
         } else {
             frame.setContentPane(new ErrorPane("Failed to find necessary files. You can download the update manually below:", "Download", () -> {
                 try {
-                    Desktop.getDesktop().browse(new URI("https://mediamod.conorthedev.me"));
+                    Desktop.getDesktop().browse(new URI("https://mediamodmc.github.io/"));
                 } catch (Exception ignored) {
                 }
             }));
